@@ -11,8 +11,8 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
-import matplotlib.pyplot as plt
-import seaborn as sns
+import plotly.express as px
+import plotly.figure_factory as ff 
 
 # Sayfa Yapılandırması
 st.set_page_config(
@@ -131,33 +131,31 @@ def show_data_prep_page(X_raw, metadata, results):
     
     st.write("---")
     
-    # --- Cross-Model Comparison (Visual Enhancement) ---
-    st.header("3️⃣ General Model Accuracy Comparison")
+    # --- Cross-Model Comparison (Plotly Bar Chart) ---
+    st.header("3️⃣ General Model Accuracy Comparison (Interactive)")
     
     all_accuracies = {name: res['accuracy'] for name, res in results.items()}
     accuracy_df = pd.DataFrame(all_accuracies.items(), columns=['Model', 'Accuracy Score'])
-    
-    # Visualization (Enhanced Bar Chart)
-    fig, ax = plt.subplots(figsize=(10, 5))
-    
-    # Use 'rocket' palette for a sleek look
     sorted_df = accuracy_df.sort_values(by='Accuracy Score', ascending=False)
-    sns.barplot(x='Model', y='Accuracy Score', data=sorted_df, palette='rocket', ax=ax)
     
-    ax.set_title("Accuracy Scores of Different Classifiers", fontsize=16)
-    ax.set_ylabel("Accuracy", fontsize=12)
-    ax.set_xlabel("Model", fontsize=12)
+    # Plotly Bar Chart oluşturma
+    fig = px.bar(
+        sorted_df,
+        x='Model',
+        y='Accuracy Score',
+        color='Accuracy Score', # Skora göre renklendirme
+        color_continuous_scale=px.colors.sequential.Sunset, # Farklı bir renk skalası
+        text=sorted_df['Accuracy Score'].apply(lambda x: f'{x:.4f}'), # Çubuk üzerine metin etiketi
+        title="Accuracy Scores of Different Classifiers",
+    )
     
-    # Add data labels on top of the bars
-    for i, row in sorted_df.reset_index(drop=True).iterrows():
-        ax.text(i, row['Accuracy Score'] + 0.002, f"{row['Accuracy Score']:.4f}", 
-                color='black', ha="center", va='bottom', fontsize=10)
-        
-    ax.set_ylim(sorted_df['Accuracy Score'].min() - 0.01, sorted_df['Accuracy Score'].max() + 0.01) # Adjust Y limit for labels
+    fig.update_traces(textposition='outside') # Metin etiketlerini çubuğun dışına yerleştirme
+    fig.update_layout(xaxis_title="Model", yaxis_title="Accuracy", 
+                      uniformtext_minsize=8, uniformtext_mode='hide',
+                      xaxis={'categoryorder':'total descending'}, # Skorlara göre sıralama
+                      height=500)
     
-    plt.xticks(rotation=45, ha='right')
-    plt.tight_layout()
-    st.pyplot(fig)
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def show_model_comparison_page(results):
@@ -212,32 +210,37 @@ def show_model_comparison_page(results):
             if col in report_df.columns:
                  report_df[col] = report_df[col].apply(lambda x: f"{x:.4f}" if isinstance(x, (int, float)) else x)
                  
-        # Highlight best scores
         st.dataframe(report_df.style.highlight_max(axis=0, color='lightgreen', subset=pd.IndexSlice[['0', '1'], ['precision', 'recall', 'f1-score']]), 
                      use_container_width=True)
         st.caption("Note: The report includes macro and weighted average scores.")
 
 
-    # Confusion Matrix (Visual Enhancement)
+    # Confusion Matrix (Plotly Heatmap)
     with col_matrix:
-        st.markdown("##### 📉 Confusion Matrix")
+        st.markdown("##### 📉 Confusion Matrix (Interactive Heatmap)")
         
-        fig, ax = plt.subplots(figsize=(7, 6))
         cm = selected_result['conf_matrix']
+        z = cm.tolist()
         
-        # Use 'magma_r' for high contrast and add styling
-        sns.heatmap(cm, annot=True, fmt='d', cmap='magma_r', 
-                    xticklabels=['Rejected (0)', 'Approved (1)'], 
-                    yticklabels=['Rejected (0)', 'Approved (1)'],
-                    annot_kws={"fontsize": 14}, # Larger annotation font
-                    linecolor='white', linewidths=0.5, # Lines for separation
-                    cbar=True,
-                    ax=ax)
+        # Plotly Figure Factory ile Karmaşıklık Matrisi oluşturma
+        fig = ff.create_annotated_heatmap(
+            z=z,
+            x=['Rejected (0)', 'Approved (1)'],
+            y=['Rejected (0)', 'Approved (1)'],
+            colorscale='Viridis', # Daha kontrastlı bir skala
+            font_colors=['white'],
+            showscale=True
+        )
         
-        ax.set_title(f"{model_name} Matrix", fontsize=16)
-        ax.set_xlabel("Predicted", fontsize=12)
-        ax.set_ylabel("True", fontsize=12)
-        st.pyplot(fig)
+        fig.update_layout(
+            title_text=f"{model_name} Confusion Matrix",
+            xaxis={'title': 'Predicted', 'side': 'bottom'},
+            yaxis={'title': 'True'},
+            margin={'t': 50}
+        )
+        
+        # Streamlit'e Plotly grafiğini gönderme
+        st.plotly_chart(fig, use_container_width=True)
 
 
 # ----------------------------------------------------------------------
