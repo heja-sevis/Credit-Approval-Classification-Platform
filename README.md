@@ -1,4 +1,4 @@
-# 💳 Data Driven Credit Risk Assessment System
+# 💳 Credit Approval Classification Platform
 
 An interactive dashboard built with Streamlit to analyze and compare the performance of multiple classification models on the UCI Credit Approval Dataset.
 This platform automates the end-to-end ML pipeline, from data fetching and preprocessing to model training and interactive evaluation.
